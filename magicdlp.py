@@ -154,7 +154,7 @@ def remotehost(directory, path, remotehost, remoteport):
 	path = path[::-1]
 	
 	#Create a json with data.
-	jsondata = {"dir": directory, "name": path, "zdata": data}
+	jsondata = {"dir": directory, "name": path, "data": data}
 
 	url = "http://" + remotehost + ":" + remoteport
 	response = requests.post(url, json=jsondata)

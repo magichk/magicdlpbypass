@@ -49,3 +49,10 @@ The magicdlp.ps1 it's a module for windows that works like the linux version and
 
 
 ![alt text](https://raw.githubusercontent.com/magichk/magicdlpbypass/master/images/magicdlpmenuwindows.png "Magicdlp windows client - windows client")
+
+
+### Docker Support
+
+The Dockerfile creates an image in order to execute the server.py script and wait for remote connections.
+
+![alt text](https://raw.githubusercontent.com/magichk/magicdlpbypass/master/images/magicdlpserverdocker.png "Magicdlp docker server - docker server")

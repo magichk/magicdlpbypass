@@ -80,7 +80,7 @@ def receive_data():
 		directory = json_data['dir']
 		nombre = json_data['name']
 		data = json_data['data']
-
+		
 
 		directory = directory[::-1]
 		directory = base64.b64decode(directory)
@@ -109,6 +109,7 @@ def receive_data():
 		return "Data received OK!"
 	except:
 		pass
+		return "KO"
 
 if __name__ == '__main__':
 	try:

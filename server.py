@@ -1,18 +1,17 @@
 from flask import Flask, request
 import json
 import os
-import base64 
+import base64
 import urllib3  # Request to external site or api
 import sys  # To read arguments
 import json  # To parse json response
-import re  # To parse regular expressions
-import hashlib  # To create the email hash for certain webs
 import os
 import subprocess
 import argparse
 import platform
 import urllib
 import time
+import socket
 
 sistema = format(platform.system())
 
@@ -60,7 +59,10 @@ def checkArgs():
 	parser.add_argument('-p', "--port", action="store",
 						dest='port',
 						help="Port to listen connections")
-	
+	parser.add_argument('-u', "--udp", action="store_true",
+						dest='udp',
+						help="Listen using UDP Protocol, by default TCP")
+
 	args = parser.parse_args()
 	if (len(sys.argv)==1) or (args.destination==False) or (args.ip==False) or (args.port==False):
 		parser.print_help(sys.stderr)
@@ -69,8 +71,9 @@ def checkArgs():
 
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024 
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024
 app.config['SESSION_COOKIE_TIMEOUT'] = 60 * 60 * 24 * 7 # 1 week
+totaldata = ""
 
 @app.route('/', methods=['POST'])
 def receive_data():
@@ -79,8 +82,7 @@ def receive_data():
 		json_data = request.get_json()
 		directory = json_data['dir']
 		nombre = json_data['name']
-		data = json_data['data']
-		
+		data = json_data['data']		
 
 		directory = directory[::-1]
 		directory = base64.b64decode(directory)
@@ -92,7 +94,7 @@ def receive_data():
 
 		if not os.path.isdir(destination):
 			os.system("mkdir -p '"+ destination + "'")
-			
+
 		dest = destination + nombre.decode()
 		dest = dest.replace("//","/")
 		dest = dest.replace("'", "\'")
@@ -104,16 +106,86 @@ def receive_data():
 
 		resultado = os.popen("cat '" + dest+".txt' | base64 -d | xxd -r -p > '" + dest + "'").read()
 		resultado = os.popen("rm -rf '"+ dest + ".txt'").read()
-		
+
 
 		return "Data received OK!"
 	except:
 		pass
 		return "KO"
 
+def udpserver():
+	# create a socket object
+	s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+	# bind the socket to a specific address and port
+	server_address = (args.ip, int(args.port))
+	s.bind(server_address)
+	totaldata = ""
+
+	while True:
+		# receive data from a client
+		data, address = s.recvfrom(1073741824)
+		
+		path = args.destination
+
+		json_data = json.loads(data.decode())
+
+		directory = json_data['dir']
+		nombre =  json_data['name']
+		data = json_data['data']
+		part = json_data['part']
+		total_partes = json_data['total']
+		
+		
+		if (int(part) == int(total_partes)):
+			if (int(part) == 0):
+				totaldata = data
+			else:
+				totaldata = totaldata + data 
+				
+
+			directory = directory[::-1]
+			directory = base64.b64decode(directory)
+
+
+			nombre = nombre[::-1]
+			nombre = base64.b64decode(nombre)
+
+			directory = directory.decode("utf-8")
+			nombre = nombre.decode("utf-8")
+
+			destination = path + directory
+
+			if not os.path.isdir(destination):
+				os.system("mkdir -p '"+ destination + "'")
+				
+			dest = destination + nombre
+
+			dest = dest.replace("//","/")
+			dest = dest.replace("'", "\'")
+
+			#guardar en un fichero la data
+			myfile = open(dest+".txt", "w")
+			myfile.write(totaldata)
+			myfile.close()
+
+			resultado = os.popen("cat '" + dest+".txt' | base64 -d | xxd -r -p > '" + dest + "'").read()
+			resultado = os.popen("rm -rf '"+ dest + ".txt'").read()
+			
+			totaldata = ""
+			
+			print(f"received name: {destination+nombre} from {address}")
+		else:
+			totaldata = totaldata + data 
+
+
+
 if __name__ == '__main__':
 	try:
 		args = checkArgs()
-		app.run(host=args.ip, port=args.port, debug=False)
+		if args.udp:
+			udpserver()
+		else:
+			app.run(host=args.ip, port=args.port, debug=False)
 	except:
 		pass

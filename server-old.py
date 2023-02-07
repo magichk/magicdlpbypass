@@ -12,7 +12,6 @@ import platform
 import urllib
 import time
 import socket
-import binascii 
 
 sistema = format(platform.system())
 
@@ -83,20 +82,13 @@ def receive_data():
 		json_data = request.get_json()
 		directory = json_data['dir']
 		nombre = json_data['name']
-		data = json_data['data']	
-		
-		data = rot13_decoder(data)
-		nombre = rot13_decoder(nombre)
-		directory = rot13_decoder(directory)
+		data = json_data['data']		
 
 		directory = directory[::-1]
 		directory = base64.b64decode(directory)
-		directory = binascii.unhexlify(directory)
 
 		nombre = nombre[::-1]
 		nombre = base64.b64decode(nombre)
-		nombre = binascii.unhexlify(nombre)
-		
 
 		destination = path + directory.decode()
 
@@ -117,8 +109,8 @@ def receive_data():
 
 
 		return "Data received OK!"
-	except Exception as e:
-		print (e)
+	except:
+		pass
 		return "KO"
 
 def udpserver():
@@ -128,17 +120,16 @@ def udpserver():
 	# bind the socket to a specific address and port
 	server_address = (args.ip, int(args.port))
 	s.bind(server_address)
-	totaldata = ""	
+	totaldata = ""
 
 	while True:
-
 		# receive data from a client
 		data, address = s.recvfrom(1073741824)
 		
 		path = args.destination
 
 		json_data = json.loads(data.decode())
-		print (json_data)
+
 		directory = json_data['dir']
 		nombre =  json_data['name']
 		data = json_data['data']
@@ -187,23 +178,15 @@ def udpserver():
 		else:
 			totaldata = totaldata + data 
 
-def rot13_decoder(string):
-    # create a translation table
-    rot13 = str.maketrans(
-        "ABCDEFGHIJKLMabcdefghijklmNOPQRSTUVWXYZnopqrstuvwxyz",
-        "NOPQRSTUVWXYZnopqrstuvwxyzABCDEFGHIJKLMabcdefghijklm")
-        
-    return string.translate(rot13)
-    
-    
+
 
 if __name__ == '__main__':
 	try:
 		args = checkArgs()
 		if args.udp:
-			print ("hola")
 			udpserver()
 		else:
 			app.run(host=args.ip, port=args.port, debug=False)
-	except Exception as e:
-		print(e)
+	except:
+		pass
+
